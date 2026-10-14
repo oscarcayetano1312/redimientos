@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Calculadora de Rendimiento Vehicular</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for clean mobile feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-900 text-slate-100 font-sans antialiased flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+
+    <!-- Top Header -->
+    <header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg border border-emerald-500/30 shadow-inner">
+                <i class="fa-solid fa-gauge-high"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight tracking-tight text-slate-100">AutoRendimiento</h1>
+                <p class="text-xs text-slate-400">Control de Combustible & Viajes</p>
+            </div>
+        </div>
+        <button onclick="app.openInfoModal()" class="w-9 h-9 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 border border-slate-600/50" aria-label="Ayuda">
+            <i class="fa-solid fa-circle-question"></i>
+        </button>
+    </header>
+
+    <!-- Main Scrollable Area -->
+    <main class="flex-1 overflow-y-auto p-4 max-w-md w-full mx-auto space-y-5 pb-20">
+
+        <!-- Mode Selector Tabs -->
+        <div class="bg-slate-800 p-1 rounded-2xl grid grid-cols-2 gap-1 border border-slate-700 shadow-sm">
+            <button id="tabCalc" onclick="app.switchTab('calc')" class="py-2.5 px-3 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 bg-emerald-600 text-white shadow-md shadow-emerald-900/30">
+                <i class="fa-solid fa-calculator"></i>
+                <span>Calculadora</span>
+            </button>
+            <button id="tabHistory" onclick="app.switchTab('history')" class="py-2.5 px-3 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Historial (<span id="historyCount">0</span>)</span>
+            </button>
+        </div>
+
+        <!-- CALCULATOR SECTION -->
+        <div id="sectionCalc" class="space-y-5">
+            <!-- Input Form Card -->
+            <div class="bg-slate-800/90 backdrop-blur border border-slate-700/80 rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
+                    <h2 class="font-semibold text-sm uppercase tracking-wider text-emerald-400 flex items-center space-x-2">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Datos del Vehículo</span>
+                    </h2>
+                    <!-- Unit Selector -->
+                    <div class="flex bg-slate-900 p-0.5 rounded-lg border border-slate-700 text-xs">
+                        <button id="unitMetric" onclick="app.setUnits('metric')" class="px-2.5 py-1 rounded-md font-medium bg-emerald-600 text-white transition">km / L</button>
+                        <button id="unitImperial" onclick="app.setUnits('imperial')" class="px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-white transition">mi / gal</button>
+                    </div>
+                </div>
+
+                <!-- Ideal Performance Input -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-medium text-slate-300 flex items-center justify-between">
+                        <span>Rendimiento Ideal de Fábrica</span>
+                        <span id="idealUnitLabel" class="text-slate-400 text-[11px]">km por Litro (km/L)</span>
+                    </label>
+                    <div class="relative rounded-xl shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-gauge"></i>
+                        </div>
+                        <input type="number" id="inputIdeal" step="0.1" min="0.1" placeholder="Ej. 14.5" 
+                            class="block w-full pl-10 pr-12 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-base font-semibold">
+                        <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-xs text-slate-400 font-medium" id="unitSuffixIdeal">
+                            km/L
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fuel Provided Input -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-medium text-slate-300 flex items-center justify-between">
+                        <span>Combustible Suministrado</span>
+                        <span id="fuelUnitLabel" class="text-slate-400 text-[11px]">Litros (L)</span>
+                    </label>
+                    <div class="relative rounded-xl shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-gas-pump"></i>
+                        </div>
+                        <input type="number" id="inputFuel" step="0.1" min="0.1" placeholder="Ej. 40" 
+                            class="block w-full pl-10 pr-12 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-base font-semibold">
+                        <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-xs text-slate-400 font-medium" id="unitSuffixFuel">
+                            Litros
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optional Cost Input -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-medium text-slate-300">
+                        <span>Precio por Unidad de Combustible (Opcional)</span>
+                    </label>
+                    <div class="relative rounded-xl shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-dollar-sign"></i>
+                        </div>
+                        <input type="number" id="inputPrice" step="0.01" min="0" placeholder="Ej. 24.50" 
+                            class="block w-full pl-10 pr-12 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-base font-semibold">
+                        <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
+                            Moneda
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calculate Action Button -->
+                <button onclick="app.calculate()" class="w-full mt-2 py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-900/40 transition active:scale-[0.98] flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Calcular Rendimiento Estimado</span>
+                </button>
+            </div>
+
+            <!-- Result Display Card (Initially Hidden) -->
+            <div id="resultCard" class="hidden bg-gradient-to-br from-slate-800 to-slate-850 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
+                    <h3 class="font-semibold text-sm uppercase tracking-wider text-teal-400 flex items-center space-x-2">
+                        <i class="fa-solid fa-square-poll-vertical"></i>
+                        <span>Resultados del Cálculo</span>
+                    </h3>
+                    <span id="badgeEfficiency" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Óptimo</span>
+                </div>
+
+                <!-- Primary Metric Highlight -->
+                <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-4 text-center space-y-1 relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 text-slate-800 text-6xl opacity-40 pointer-events-none">
+                        <i class="fa-solid fa-route"></i>
+                    </div>
+                    <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Distancia Estimada a Recorrer</span>
+                    <div class="text-3xl font-extrabold text-white tracking-tight flex items-baseline justify-center space-x-1">
+                        <span id="resDistance">0.0</span>
+                        <span id="resUnitDist" class="text-base font-normal text-emerald-400">km</span>
+                    </div>
+                </div>
+
+                <!-- Secondary Metrics Grid -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-900/60 border border-slate-700/50 rounded-xl p-3 space-y-1">
+                        <span class="text-[11px] text-slate-400 uppercase tracking-wide block">Rendimiento Base</span>
+                        <div class="text-lg font-bold text-slate-100" id="resIdeal">0.0 <span class="text-xs font-normal text-slate-400" id="resUnitIdeal">km/L</span></div>
+                    </div>
+                    <div class="bg-slate-900/60 border border-slate-700/50 rounded-xl p-3 space-y-1">
+                        <span class="text-[11px] text-slate-400 uppercase tracking-wide block">Combustible Usado</span>
+                        <div class="text-lg font-bold text-slate-100" id="resFuel">0.0 <span class="text-xs font-normal text-slate-400" id="resUnitFuel">L</span></div>
+                    </div>
+                </div>
+
+                <!-- Cost Row (Conditional) -->
+                <div id="costRow" class="hidden bg-slate-900/60 border border-slate-700/50 rounded-xl p-3.5 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm border border-amber-500/30">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 block font-medium">Costo Total del Combustible</span>
+                            <span class="text-xs text-slate-500" id="costPerUnitDisplay">-- por unidad</span>
+                        </div>
+                    </div>
+                    <div class="text-lg font-bold text-amber-400" id="resTotalCost">$0.00</div>
+                </div>
+
+                <!-- Tips / Analysis -->
+                <div id="analysisBox" class="bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-3.5 text-xs text-emerald-300 leading-relaxed flex items-start space-x-3">
+                    <i class="fa-solid fa-lightbulb text-emerald-400 mt-0.5 text-base flex-shrink-0"></i>
+                    <div id="analysisText">
+                        Con este combustible y el rendimiento ideal de tu vehículo, podrás completar tus trayectos habituales de manera eficiente.
+                    </div>
+                </div>
+
+                <!-- Save Action -->
+                <button onclick="app.saveToHistory()" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl border border-slate-600 transition active:scale-[0.98] flex items-center justify-center space-x-2 text-sm shadow">
+                    <i class="fa-solid fa-floppy-disk text-emerald-400"></i>
+                    <span>Guardar en Historial</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- HISTORY SECTION -->
+        <div id="sectionHistory" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="font-semibold text-sm uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+                    <i class="fa-solid fa-clock-rotate-left text-emerald-400"></i>
+                    <span>Registros Guardados</span>
+                </h2>
+                <button onclick="app.clearHistory()" id="clearHistoryBtn" class="text-xs text-rose-400 hover:text-rose-300 font-medium transition flex items-center space-x-1">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Borrar todo</span>
+                </button>
+            </div>
+
+            <!-- History List Container -->
+            <div id="historyList" class="space-y-3">
+                <!-- Populated dynamically via JS -->
+            </div>
+
+            <!-- Empty History State -->
+            <div id="emptyHistory" class="text-center py-12 px-4 space-y-3 bg-slate-800/40 border border-slate-800 rounded-2xl">
+                <div class="w-16 h-16 mx-auto rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-2xl">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="font-semibold text-slate-300 text-sm">Sin registros previos</h3>
+                    <p class="text-xs text-slate-500 max-w-xs mx-auto">Calcula el rendimiento de tus cargas de combustible y guárdalas para llevar un control detallado.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 class="font-bold text-slate-100 flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-info text-emerald-400"></i>
+                    <span>¿Cómo funciona?</span>
+                </h3>
+                <button onclick="app.closeInfoModal()" class="w-8 h-8 rounded-lg bg-slate-700/50 text-slate-400 hover:text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <p>Esta aplicación te permite proyectar la distancia total que tu vehículo puede recorrer basándose en:</p>
+                <ul class="space-y-2 pl-2">
+                    <li class="flex items-start space-x-2">
+                        <i class="fa-solid fa-check text-emerald-400 mt-0.5"></i>
+                        <span><strong>Rendimiento Ideal:</strong> Los kilómetros por litro (o millas por galón) que el fabricante o tu experiencia óptima estipulan.</span>
+                    </li>
+                    <li class="flex items-start space-x-2">
+                        <i class="fa-solid fa-check text-emerald-400 mt-0.5"></i>
+                        <span><strong>Combustible Suministrado:</strong> Los litros o galones exactos que le proporcionas al tanque en la recarga.</span>
+                    </li>
+                </ul>
+                <p class="text-slate-400 pt-1">Fórmula utilizada: <code class="bg-slate-900 px-1.5 py-0.5 rounded text-emerald-300 font-mono">Distancia = Rendimiento × Combustible</code></p>
+            </div>
+            <button onclick="app.closeInfoModal()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl text-xs transition shadow">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-slate-600 text-slate-100 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium transition-all duration-300 opacity-0 pointer-events-none flex items-center space-x-2">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">Acción realizada con éxito</span>
+    </div>
+
+    <!-- Footer / Bottom Navigation hint -->
+    <footer class="bg-slate-900/90 border-t border-slate-800 text-center py-2.5 text-[11px] text-slate-500">
+        AutoRendimiento &bull; Optimizado para Dispositivos Móviles
+    </footer>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        class VehiclePerformanceApp {
+            constructor() {
+                this.unitSystem = 'metric'; // 'metric' (km/L) or 'imperial' (mi/gal)
+                this.history = JSON.parse(localStorage.getItem('vehicle_perf_history')) || [];
+                this.currentResult = null;
+                this.initListeners();
+                this.updateUIUnits();
+                this.renderHistory();
+            }
+
+            initListeners() {
+                // Real-time calculation on input change if both filled
+                ['inputIdeal', 'inputFuel', 'inputPrice'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('input', () => {
+                            // Optional auto-calc trigger or leave manual
+                        });
+                    }
+                });
+            }
+
+            setUnits(system) {
+                this.unitSystem = system;
+                const btnMetric = document.getElementById('unitMetric');
+                const btnImperial = document.getElementById('unitImperial');
+
+                if (system === 'metric') {
+                    btnMetric.className = 'px-2.5 py-1 rounded-md font-medium bg-emerald-600 text-white transition';
+                    btnImperial.className = 'px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-white transition';
+                } else {
+                    btnImperial.className = 'px-2.5 py-1 rounded-md font-medium bg-emerald-600 text-white transition';
+                    btnMetric.className = 'px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-white transition';
+                }
+
+                this.updateUIUnits();
+            }
+
+            updateUIUnits() {
+                const isMetric = this.unitSystem === 'metric';
+                document.getElementById('idealUnitLabel').textContent = isMetric ? 'km por Litro (km/L)' : 'Millas por Galón (MPG)';
+                document.getElementById('unitSuffixIdeal').textContent = isMetric ? 'km/L' : 'MPG';
+                
+                document.getElementById('fuelUnitLabel').textContent = isMetric ? 'Litros (L)' : 'Galones (gal)';
+                document.getElementById('unitSuffixFuel').textContent = isMetric ? 'Litros' : 'Galones';
+
+                document.getElementById('resUnitDist').textContent = isMetric ? 'km' : 'mi';
+                document.getElementById('resUnitIdeal').textContent = isMetric ? 'km/L' : 'MPG';
+                document.getElementById('resUnitFuel').textContent = isMetric ? 'L' : 'gal';
+            }
+
+            switchTab(tab) {
+                const tabCalc = document.getElementById('tabCalc');
+                const tabHistory = document.getElementById('tabHistory');
+                const sectionCalc = document.getElementById('sectionCalc');
+                const sectionHistory = document.getElementById('sectionHistory');
+
+                if (tab === 'calc') {
+                    tabCalc.className = 'py-2.5 px-3 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 bg-emerald-600 text-white shadow-md shadow-emerald-900/30';
+                    tabHistory.className = 'py-2.5 px-3 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-slate-200';
+                    sectionCalc.classList.remove('hidden');
+                    sectionHistory.classList.add('hidden');
+                } else {
+                    tabHistory.className = 'py-2.5 px-3 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 bg-emerald-600 text-white shadow-md shadow-emerald-900/30';
+                    tabCalc.className = 'py-2.5 px-3 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-slate-200';
+                    sectionHistory.classList.remove('hidden');
+                    sectionCalc.classList.add('hidden');
+                    this.renderHistory();
+                }
+            }
+
+            calculate() {
+                const idealVal = parseFloat(document.getElementById('inputIdeal').value);
+                const fuelVal = parseFloat(document.getElementById('inputFuel').value);
+                const priceVal = parseFloat(document.getElementById('inputPrice').value) || 0;
+
+                if (!idealVal || isNaN(idealVal) || idealVal <= 0) {
+                    this.showToast('Por favor ingresa un rendimiento ideal válido', 'error');
+                    document.getElementById('inputIdeal').focus();
+                    return;
+                }
+
+                if (!fuelVal || isNaN(fuelVal) || fuelVal <= 0) {
+                    this.showToast('Por favor ingresa la cantidad de combustible suministrado', 'error');
+                    document.getElementById('inputFuel').focus();
+                    return;
+                }
+
+                // Calculation: Distance = Ideal Performance * Fuel Provided
+                const estimatedDistance = idealVal * fuelVal;
+                const totalCost = priceVal > 0 ? fuelVal * priceVal : 0;
+
+                this.currentResult = {
+                    id: Date.now(),
+                    date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    ideal: idealVal,
+                    fuel: fuelVal,
+                    pricePerUnit: priceVal,
+                    distance: estimatedDistance,
+                    totalCost: totalCost,
+                    unitSystem: this.unitSystem
+                };
+
+                // Render results in UI
+                document.getElementById('resDistance').textContent = estimatedDistance.toFixed(1);
+                document.getElementById('resIdeal').innerHTML = `${idealVal.toFixed(1)} <span class="text-xs font-normal text-slate-400">${this.unitSystem === 'metric' ? 'km/L' : 'MPG'}</span>`;
+                document.getElementById('resFuel').innerHTML = `${fuelVal.toFixed(1)} <span class="text-xs font-normal text-slate-400">${this.unitSystem === 'metric' ? 'L' : 'gal'}</span>`;
+
+                const costRow = document.getElementById('costRow');
+                if (totalCost > 0) {
+                    costRow.classList.remove('hidden');
+                    document.getElementById('resTotalCost').textContent = `$${totalCost.toFixed(2)}`;
+                    document.getElementById('costPerUnitDisplay').textContent = `$${priceVal.toFixed(2)} por ${this.unitSystem === 'metric' ? 'litro' : 'galón'}`;
+                } else {
+                    costRow.classList.add('hidden');
+                }
+
+                // Efficiency Analysis remarks
+                const analysisText = document.getElementById('analysisText');
+                const badge = document.getElementById('badgeEfficiency');
+                const unitLabelDist = this.unitSystem === 'metric' ? 'kilómetros' : 'millas';
+
+                if (idealVal >= 15 && this.unitSystem === 'metric' || idealVal >= 35 && this.unitSystem === 'imperial') {
+                    badge.className = 'px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                    badge.textContent = 'Alto Rendimiento';
+                    analysisText.innerHTML = `¡Excelente! Tu vehículo es muy eficiente. Con estos <strong>${fuelVal} ${this.unitSystem === 'metric' ? 'litros' : 'galones'}</strong> alcanzarás aproximadamente <strong>${estimatedDistance.toFixed(1)} ${unitLabelDist}</strong>.`;
+                } else {
+                    badge.className = 'px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+                    badge.textContent = 'Rendimiento Estándar';
+                    analysisText.innerHTML = `Cálculo completado correctamente. Con este suministro proyectas recorrer unos <strong>${estimatedDistance.toFixed(1)} ${unitLabelDist}</strong> bajo condiciones ideales.`;
+                }
+
+                // Reveal result card with smooth display
+                const resCard = document.getElementById('resultCard');
+                resCard.classList.remove('hidden');
+                resCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                this.showToast('Cálculo realizado exitosamente');
+            }
+
+            saveToHistory() {
+                if (!this.currentResult) return;
+
+                // Check duplicate or add to front
+                this.history.unshift(this.currentResult);
+                localStorage.setItem('vehicle_perf_history', JSON.stringify(this.history));
+                
+                document.getElementById('historyCount').textContent = this.history.length;
+                this.showToast('Registro guardado en el historial');
+                this.renderHistory();
+            }
+
+            renderHistory() {
+                const listEl = document.getElementById('historyList');
+                const emptyEl = document.getElementById('emptyHistory');
+                document.getElementById('historyCount').textContent = this.history.length;
+
+                if (this.history.length === 0) {
+                    listEl.innerHTML = '';
+                    emptyEl.classList.remove('hidden');
+                    document.getElementById('clearHistoryBtn').classList.add('hidden');
+                    return;
+                }
+
+                emptyEl.classList.add('hidden');
+                document.getElementById('clearHistoryBtn').classList.remove('hidden');
+
+                listEl.innerHTML = this.history.map(item => `
+                    <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 space-y-3 shadow hover:border-slate-600 transition">
+                        <div class="flex items-center justify-between text-xs text-slate-400 border-b border-slate-700/50 pb-2">
+                            <span class="flex items-center space-x-1.5">
+                                <i class="fa-solid fa-calendar-day text-emerald-400"></i>
+                                <span>${item.date}</span>
+                            </span>
+                            <button onclick="app.deleteItem(${item.id})" class="text-slate-500 hover:text-rose-400 transition p-1" title="Eliminar registro">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div class="bg-slate-900/60 p-2 rounded-lg">
+                                <span class="text-[10px] uppercase text-slate-400 block">Ideal</span>
+                                <span class="font-semibold text-sm text-slate-200">${item.ideal} <span class="text-[10px] font-normal text-slate-400">${item.unitSystem === 'metric' ? 'km/L' : 'MPG'}</span></span>
+                            </div>
+                            <div class="bg-slate-900/60 p-2 rounded-lg">
+                                <span class="text-[10px] uppercase text-slate-400 block">Combustible</span>
+                                <span class="font-semibold text-sm text-slate-200">${item.fuel} <span class="text-[10px] font-normal text-slate-400">${item.unitSystem === 'metric' ? 'L' : 'gal'}</span></span>
+                            </div>
+                            <div class="bg-slate-900/60 p-2 rounded-lg border border-emerald-500/20">
+                                <span class="text-[10px] uppercase text-emerald-400 block">Distancia</span>
+                                <span class="font-bold text-sm text-emerald-300">${item.distance.toFixed(1)} <span class="text-[10px] font-normal text-emerald-400">${item.unitSystem === 'metric' ? 'km' : 'mi'}</span></span>
+                            </div>
+                        </div>
+                        ${item.totalCost > 0 ? `
+                            <div class="flex items-center justify-between text-xs pt-1 px-1 text-slate-300">
+                                <span class="text-slate-400">Costo total invertido:</span>
+                                <span class="font-semibold text-amber-400">$${item.totalCost.toFixed(2)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            }
+
+            deleteItem(id) {
+                this.history = this.history.filter(i => i.id !== id);
+                localStorage.setItem('vehicle_perf_history', JSON.stringify(this.history));
+                this.renderHistory();
+                this.showToast('Registro eliminado');
+            }
+
+            clearHistory() {
+                if (confirm('¿Estás seguro de que deseas borrar todo el historial?')) {
+                    this.history = [];
+                    localStorage.removeItem('vehicle_perf_history');
+                    this.renderHistory();
+                    this.showToast('Historial borrado');
+                }
+            }
+
+            openInfoModal() {
+                document.getElementById('infoModal').classList.remove('hidden');
+            }
+
+            closeInfoModal() {
+                document.getElementById('infoModal').classList.add('hidden');
+            }
+
+            showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const toastMsg = document.getElementById('toastMsg');
+                const toastIcon = document.getElementById('toastIcon');
+
+                toastMsg.textContent = message;
+                if (type === 'error') {
+                    toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400';
+                } else {
+                    toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+                }
+
+                toast.classList.remove('opacity-0', 'pointer-events-none');
+                toast.classList.add('opacity-100');
+
+                setTimeout(() => {
+                    toast.classList.remove('opacity-100');
+                    toast.classList.add('opacity-0', 'pointer-events-none');
+                }, 3000);
+            }
+        }
+
+        // Initialize App on load
+        const app = new VehiclePerformanceApp();
+    </script>
+</body>
+</html>
